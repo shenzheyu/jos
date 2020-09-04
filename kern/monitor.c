@@ -59,6 +59,22 @@ int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
 	// Your code here.
+	cprintf("Stack backtrace:\n");
+
+	uint32_t ebp, eip, arg0, arg1, arg2, arg3, arg4;
+	ebp = read_ebp();
+	while(ebp != 0){
+		eip = *((uint32_t *)ebp + 1);
+		arg0 = *((uintptr_t *)ebp + 2);
+		arg1 = *((uintptr_t *)ebp + 3);
+		arg2 = *((uintptr_t *)ebp + 4);
+		arg3 = *((uintptr_t *)ebp + 5);
+		arg4 = *((uintptr_t *)ebp + 6);
+		
+		cprintf("  ebp %08x  eip %08x  args %08x %08x %08x %08x %08x\n", ebp, eip, arg0, arg1, arg2, arg3, arg4);
+		
+		ebp = *((uint32_t *)ebp);
+	}	
 	return 0;
 }
 
