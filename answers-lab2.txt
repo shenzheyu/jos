@@ -1,0 +1,12 @@
+Question 1
+Variable x should be uintptr_t, because it can reference a pointer.
+
+Question 2
+
+Question 3
+
+Question 4
+
+Question 5
+
+Question 6
