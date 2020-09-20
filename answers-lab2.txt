@@ -1,0 +1,29 @@
+Question 1
+Variable x should be uintptr_t, because it can reference a pointer.
+
+Question 2
+Entry   Base Virtual Address    Points to (Logically):
+1023    0xFFC00000              Page table for top 4MB of phys memory
+960     0xF0000000              The top of kernel stack
+959     0xEFC00000              The top of memory mapped I/O 
+957     0xEF400000              UVPT
+956     0xEF000000              UPAGES
+
+Question 3
+Page-table entries hold protection parameters of restricting addressable domain (without PTE_U) prevent user programs to read or write the kernel's memory.
+Page-level protection protect the kernel memory.
+
+Question 4
+UPAGES occupies 4MB, and the size of a struct PageInfo is 8B. 
+Therefore, the maximum number of pages is 512K, which is 2GB.
+
+Question 5
+It needs 512K/2^10 = 512 page table pages, and 1 page directory table page. Total cost 513*4K = 2MB overhead.
+No, the maximum amount of physical memory is 4GB.
+We could expand UPAGES to 8MB.
+
+Question 6
+mov	$relocated, %eax
+jmp	*%eax
+It maps both high memory and low memory to the same instruction.
+This transition enable us to excess total 256MB memory.
