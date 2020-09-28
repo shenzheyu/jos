@@ -1,0 +1,5 @@
+1. 
+If all exceptions and interrupts were delivered to the same handler, we cannot distinguish whether should the instruction restart.
+
+2.
+General protection fault has high priority than page fault. It prevents kernel from malicious application to invoke page fault handler.
