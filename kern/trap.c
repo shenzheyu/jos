@@ -85,6 +85,8 @@ trap_init(void)
 	void machine_check_handler();
 	void simd_floating_point_error_handler();
 
+	void syscall_handler();
+
 	// initialize the idt to point to each of these entry points
 	SETGATE(idt[T_DIVIDE], 1, GD_KT, divide_error_handler, 0);
 	SETGATE(idt[T_DEBUG], 1, GD_KT, debug_exception_handler, 0);
@@ -104,6 +106,8 @@ trap_init(void)
 	SETGATE(idt[T_ALIGN], 1, GD_KT, aligment_check_handler, 0);
 	SETGATE(idt[T_MCHK], 1, GD_KT, machine_check_handler, 0);
 	SETGATE(idt[T_SIMDERR], 1, GD_KT, simd_floating_point_error_handler, 0);
+
+	SETGATE(idt[T_SYSCALL], 1, GD_KT, syscall_handler, 3);
 
 	// Per-CPU setup 
 	trap_init_percpu();
@@ -190,6 +194,13 @@ trap_dispatch(struct Trapframe *tf)
 		monitor(tf);
 	}
 
+	if (tf->tf_trapno == T_SYSCALL) {
+		int32_t return_value;
+		return_value = syscall(tf->tf_regs.reg_eax, tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx, tf->tf_regs.reg_ebx, tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
+		tf->tf_regs.reg_eax = return_value;
+		return;
+	}
+
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
 	if (tf->tf_cs == GD_KT)
@@ -250,6 +261,9 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
+	if ((tf->tf_cs & 3) != 3) {
+		panic("page_fault_handler: kernel-mode page faults.\n");
+	}
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.

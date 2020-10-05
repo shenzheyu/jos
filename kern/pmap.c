@@ -650,6 +650,27 @@ int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
+	// env can access address below ULIM
+	if ((uint32_t)va >= ULIM) {
+		user_mem_check_addr = (uintptr_t)va;
+		return -E_FAULT;
+	}
+
+	// check env is allowed to access the range of memory
+	uint32_t bottom = (uint32_t)ROUNDDOWN(va, PGSIZE);
+	uint32_t top = (uint32_t)ROUNDUP(va + len, PGSIZE);
+	for (; bottom < top; bottom += PGSIZE) {
+		// get the page table entry in env->env_pgdir
+		pte_t *pte = pgdir_walk(env->env_pgdir, (char *)bottom, 0);
+		if (!pte || (*pte & (perm | PTE_P)) != (perm | PTE_P)) {
+			if (bottom < (uint32_t)va) {
+				user_mem_check_addr = (uintptr_t)va;
+			} else {
+				user_mem_check_addr = (uintptr_t)bottom;
+			}
+			return -E_FAULT;
+		}
+	}
 
 	return 0;
 }
