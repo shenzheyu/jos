@@ -1,0 +1,53 @@
+Exercise 1
+Familiar with assembly language.
+
+Exercise 2
+BIOS sets up an interrupt descriptor table and initializes various devices such as the VGA display. 
+After initializing the PCI bus, when it finds a bootable device, the BIOS reads the boot loader from the disk and transfers control to it.
+
+Exercise 3
+At what point does the processor start executing 32-bit code? What exactly causes the switch from 16- to 32-bit mode?
+    mov    $0x10,%ax
+    jump to the next instruction, but in 32bit code segment.
+What is the last instruction of the boot loader executed, and what is the first instruction of the kernel it just loaded?
+    call   *0x10018
+    movw	$0x1234,0x472
+Where is the first instruction of the kernel?
+    f010000c
+How does the boot loader decide how many sectors it must read in order to fetch the entire kernel from disk? Where does it find this information?
+    get segment number and offset from ELF header.
+
+Exercise 4
+Familiar with C pointers.
+
+Exercise 5
+Program received signal SIGTRAP at 0x7c2d:  ljmp    $0x8,$0x8c32
+
+Exercise 6
+text of kernel is loaded in memory at 0x0010000
+
+Exercise 7
+Before the movl %eax, %cr0, 0x00100000 is not 0 and 0xf0100000 is all 0.
+After both 0x00100000 and 0xf0100000 is the same.
+
+Exercise 8
+Explain the interface between printf.c and console.c. Specifically, what function does console.c export? How is this function used by printf.c?
+    console.c exports cputchar() as basic I/O operation.
+    printfmt.c exports vprintfmt() to format and print a string.
+Explain the following from console.c:
+    if (crt_pos >= CRT_SIZE) {
+        int i;
+        memcpy(crt_buf, crt_buf + CRT_COLS, (CRT_SIZE - CRT_COLS) * sizeof(uint16_t));
+        for (i = CRT_SIZE - CRT_COLS; i < CRT_SIZE; i++)
+            crt_buf[i] = 0x0700 | ' ';
+        crt_pos -= CRT_COLS;
+    }
+    // this code support the line break
+
+Exercise 9
+
+Exercise 10
+
+Exercise 11
+
+Exercise 12

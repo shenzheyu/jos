@@ -1,0 +1,13 @@
+1. 
+If all exceptions and interrupts were delivered to the same handler, we cannot distinguish whether should the instruction restart.
+
+2.
+General protection fault has high priority than page fault. It prevents kernel from malicious application to invoke page fault handler.
+
+3. 
+Because the descriptor privilege reaults whether it generate a break point exception or a general protection fault.
+I set the descriptor privilege level to be 3.
+If I set it as 0, it would trigger a general protection fault. 
+
+4.
+These mechanisms protect the kernel and user program not affected each other.
