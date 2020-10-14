@@ -1,0 +1,11 @@
+1.
+MPBOOTPHYS translates the kernel virtual address to physical address.
+
+2.
+If multiple CPU run the kernel mode simutaneously, the later will overwrite the former.
+
+3.
+Because kern_pgdir is the template of env_pgdir, the two virtual addresses of e has the same physical address mapping.
+
+4.
+Because address translation happens when user application traps into kernel. In trap() of kern/trap.c, it stores the tf into env.

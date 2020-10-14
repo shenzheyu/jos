@@ -301,6 +301,12 @@ mem_init_mp(void)
 	//
 	// LAB 4: Your code here:
 
+	uint32_t i = 0;
+	for (i = 0; i < NCPU; i++) {
+		uintptr_t kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP);
+		// map the virtual address [kstacktop_i - KSTKSIZE, kstacktop_i) to physical address percpu_kstacks[i]
+		boot_map_region(kern_pgdir, kstacktop_i - KSTKSIZE, KSTKSIZE, PADDR(percpu_kstacks[i]), PTE_W | PTE_P);
+	}
 }
 
 // --------------------------------------------------------------
@@ -343,6 +349,11 @@ page_init(void)
 	// mark physical page 0 as in use => i start from 1 
 	// the rest of base memory is free => i < npages_basemem
 	for (i = 1; i < npages_basemem; i++) {
+		// avoid adding the page at MPENTRY_PADDR to the free list
+		if (i == PGNUM(MPENTRY_PADDR)) {
+			continue;
+		}
+
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = page_free_list;
 		page_free_list = &pages[i];
@@ -692,7 +703,21 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+	// panic("mmio_map_region not implemented");
+
+	size = ROUNDUP(size, PGSIZE);
+	// panic if base + size over flow MMIOLIM
+	if (base + size > MMIOLIM) {
+		panic("mmio_map_region: reservation would overflow MMIOLIM.\n");
+	} 
+
+	// map the base to pa
+	boot_map_region(kern_pgdir, base, size, pa, PTE_PCD | PTE_PWT | PTE_W);
+	
+	// return the base of the reserved region
+	uintptr_t org_base = base;
+	base += size;
+	return (char *)org_base;
 }
 
 static uintptr_t user_mem_check_addr;
