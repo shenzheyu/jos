@@ -26,6 +26,14 @@ pgfault(struct UTrapframe *utf)
 
 	// LAB 4: Your code here.
 
+
+	if (!(err & FEC_WR)) {
+		panic("pgfault: faulting access was not write\n");
+	}	
+	if (!(((pte_t *)uvpt)[PGNUM(addr)] & PTE_COW)) {
+		panic("pgfault: faulting access was not to a copy-on-write page\n");
+	}
+
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
 	// page to the old page's address.
@@ -34,7 +42,31 @@ pgfault(struct UTrapframe *utf)
 
 	// LAB 4: Your code here.
 
-	panic("pgfault not implemented");
+	// panic("pgfault not implemented");
+
+	envid_t envid = sys_getenvid();
+
+	r = sys_page_alloc(envid, (void *)PFTEMP, PTE_U | PTE_P | PTE_W);
+	if (r < 0) {
+		panic("pgfault: can't allocate a new page\n");
+	}
+
+	// copy the data from the old page to the new page
+	addr = ROUNDDOWN(addr, PGSIZE);
+	memcpy((void *)PFTEMP, addr, PGSIZE);
+
+	// move the new page to the old page's address
+	r = sys_page_map(envid, (void *)PFTEMP, envid, addr, PTE_U | PTE_P | PTE_W);
+	if (r < 0) {
+		panic("pgfault: can't move the new page to old page's address\n");
+	}
+
+	// unmap the temporary location
+	r = sys_page_unmap(envid, PFTEMP);
+	if (r < 0) {
+		panic("pgfault: can't unmap PFTEMP\n");
+	}
+
 }
 
 //
@@ -54,7 +86,31 @@ duppage(envid_t envid, unsigned pn)
 	int r;
 
 	// LAB 4: Your code here.
-	panic("duppage not implemented");
+	// panic("duppage not implemented");
+
+	uintptr_t va = pn * PGSIZE;
+	envid_t current_envid = sys_getenvid();
+	pte_t pte = uvpt[pn];
+
+	int perm = PTE_U | PTE_P;
+	if (pte & (PTE_W | PTE_COW)) {
+		perm |= PTE_COW;
+	}
+
+	// map from parent address space to child address space
+	r = sys_page_map(current_envid, (void *)va, envid, (void *)va, perm);
+	if (r < 0) {
+		return r;
+	}
+
+	if (pte & (PTE_W | PTE_COW)) {
+		// remap parent address space
+		r = sys_page_map(current_envid, (void *)va, current_envid, (void *)va, perm);
+		if (r < 0) {
+			return r;
+		}
+	}
+
 	return 0;
 }
 
@@ -78,7 +134,58 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
-	panic("fork not implemented");
+	// panic("fork not implemented");
+
+	// set up page fault handler
+	set_pgfault_handler(pgfault);
+
+	// create a child
+	envid_t child_id = sys_exofork();
+	if (child_id < 0) {
+		return -1;
+	} else if (child_id == 0) {
+		// fix thisenv in the child process
+		thisenv = envs + ENVX(sys_getenvid());
+		return child_id;
+	}
+
+	// copy address space to the child
+	uintptr_t va = 0;
+	int e;
+	for (; va < UTOP; va += PGSIZE) {
+		// check whether pde and pte exist
+		if ((((pde_t *)uvpd)[PDX(va)] & PTE_P) && (((pte_t *)uvpt)[PGNUM(va)] & PTE_P)) {
+			if (va == UXSTACKTOP - PGSIZE) {
+				// ignore user exception stack
+				continue;
+			}
+			e = duppage(child_id, PGNUM(va));
+			if (e < 0) {
+				return e;
+			}
+		}
+	}
+
+	// allocate a new page for the child's user exception stack
+	e = sys_page_alloc(child_id, (void *)(UXSTACKTOP - PGSIZE), PTE_U | PTE_P | PTE_W);
+	if (e < 0) {
+		return e;
+	}
+
+	// copy page fault handler to the childe
+	extern void _pgfault_upcall(void);
+	e = sys_env_set_pgfault_upcall(child_id, _pgfault_upcall);
+	if (e < 0) {
+		return e;
+	}
+
+	// mark the child as runnable
+	e = sys_env_set_status(child_id, ENV_RUNNABLE);
+	if (e < 0) {
+		return e;
+	}
+
+	return child_id;
 }
 
 // Challenge!
