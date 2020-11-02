@@ -270,6 +270,10 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 
 	// Enable interrupts while in user mode.
 	// LAB 4: Your code here.
+	// cprintf("env_alloc()\n");
+	// cprintf("1eflags: %x\n", e->env_tf.tf_eflags);
+	e->env_tf.tf_eflags |= FL_IF;
+	// cprintf("2eflags: %x\n", e->env_tf.tf_eflags);
 
 	// Clear the page fault handler until user installs one.
 	e->env_pgfault_upcall = 0;

@@ -49,10 +49,7 @@ sched_yield(void)
 
 	// search through envs for an ENV_RUNNABLE environment
 	uint32_t i = env_start;
-	for (i = env_start; i != env_end; i++) {
-		if (i == NENV) {
-			i = 0;
-		}
+	for (i = env_start; i != env_end; i = (i == NENV - 1) ? 0 : i + 1) {
 		if (envs[i].env_status == ENV_RUNNABLE) {
 			idle = &envs[i];
 			break;
@@ -73,9 +70,6 @@ sched_yield(void)
 	} else {
 		sched_halt();
 	}
-
-	// sched_halt never returns
-	sched_halt();
 }
 
 // Halt this CPU when there is nothing to do. Wait until the
