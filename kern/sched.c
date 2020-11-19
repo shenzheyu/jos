@@ -29,9 +29,47 @@ sched_yield(void)
 	// below to halt the cpu.
 
 	// LAB 4: Your code here.
+	idle = NULL;
 
-	// sched_halt never returns
-	sched_halt();
+	// store the start and end index for going through envs
+	uint32_t env_start = 0;
+	uint32_t env_end = 0;
+
+	if (thiscpu->cpu_env) {
+		env_end = ENVX(thiscpu->cpu_env->env_id);
+		if (env_end == NENV - 1) {
+			env_start = 0;
+		} else {
+			env_start = env_end + 1;
+		}
+	} else {
+		env_start = 0;
+		env_end = NENV - 1;
+	}
+
+	// search through envs for an ENV_RUNNABLE environment
+	uint32_t i = env_start;
+	for (i = env_start; i != env_end; i = (i == NENV - 1) ? 0 : i + 1) {
+		if (envs[i].env_status == ENV_RUNNABLE) {
+			idle = &envs[i];
+			break;
+		}
+	}
+
+	// if no envs are runnable, but the environment previously 
+	// running on this CPU is still ENV_RUNNING, choose it
+	if (!idle && thiscpu->cpu_env && thiscpu->cpu_env->env_status == ENV_RUNNING) {
+		idle = &envs[ENVX(thiscpu->cpu_env->env_id)];
+	}
+
+	// cprintf("cpu %d, env %d\n", thiscpu->cpu_id, ENVX(idle->env_id));
+
+	// run the idle
+	if (idle) {
+		env_run(idle);
+	} else {
+		sched_halt();
+	}
 }
 
 // Halt this CPU when there is nothing to do. Wait until the

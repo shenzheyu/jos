@@ -48,9 +48,53 @@
  * Lab 3: Your code here for generating entry points for the different traps.
  */
 
+/* reference to table 5-1 of the IA-32 Devoloper's manumal */
+TRAPHANDLER_NOEC(divide_error_handler, T_DIVIDE)
+TRAPHANDLER_NOEC(debug_exception_handler, T_DEBUG)
+TRAPHANDLER_NOEC(non_maskable_interrupt_handler, T_NMI)
+TRAPHANDLER_NOEC(breakpoint_handler, T_BRKPT)
+TRAPHANDLER_NOEC(overflow_handler, T_OFLOW)
+TRAPHANDLER_NOEC(bounds_check_handler, T_BOUND)
+TRAPHANDLER_NOEC(illegal_opcode_handler, T_ILLOP)
+TRAPHANDLER_NOEC(device_not_available_handler, T_DEVICE)
+TRAPHANDLER(double_fault_handler, T_DBLFLT)
+TRAPHANDLER(invalid_task_switch_segment_handler, T_TSS)
+TRAPHANDLER(segment_not_present_handler, T_SEGNP)
+TRAPHANDLER(stack_exception_handler, T_STACK)
+TRAPHANDLER(general_protection_fault_handler, T_GPFLT)
+TRAPHANDLER(pagefault_handler, T_PGFLT)
+TRAPHANDLER_NOEC(floating_point_error_handler, T_FPERR)
+TRAPHANDLER(aligment_check_handler, T_ALIGN)
+TRAPHANDLER_NOEC(machine_check_handler, T_MCHK)
+TRAPHANDLER_NOEC(simd_floating_point_error_handler, T_SIMDERR)
 
+/* system call */
+TRAPHANDLER_NOEC(syscall_handler, T_SYSCALL)
+
+/* external interrupts */
+TRAPHANDLER_NOEC(irq_timer_handler, IRQ_OFFSET + IRQ_TIMER)
+TRAPHANDLER_NOEC(irq_kbd_handler, IRQ_OFFSET + IRQ_KBD)
+TRAPHANDLER_NOEC(irq_serial_handler, IRQ_OFFSET + IRQ_SERIAL)
+TRAPHANDLER_NOEC(irq_spurious_handler, IRQ_OFFSET + IRQ_SPURIOUS)
+TRAPHANDLER_NOEC(irq_ide_handler, IRQ_OFFSET + IRQ_IDE)
+TRAPHANDLER_NOEC(irq_error_handler, IRQ_OFFSET + IRQ_ERROR)
 
 /*
  * Lab 3: Your code here for _alltraps
  */
+_alltraps:
+/* push values to make the stack look like a struct Trapframe */
+push %ds
+push %es
+pushal
 
+/* load GD_KD into %ds and %es */
+mov $GD_KD, %ax
+mov %ax, %ds
+mov %ax, %es
+
+/* pushl %esp to pass a pointer to the Trapframe as an argument to trap() */
+pushl %esp
+
+/* call trap */ 
+call trap
