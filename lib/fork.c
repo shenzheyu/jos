@@ -92,21 +92,21 @@ duppage(envid_t envid, unsigned pn)
 	envid_t current_envid = sys_getenvid();
 	pte_t pte = uvpt[pn];
 
-	int perm = PTE_U | PTE_P;
-	if (pte & (PTE_W | PTE_COW)) {
-		perm |= PTE_COW;
-	}
-
-	// map from parent address space to child address space
-	r = sys_page_map(current_envid, (void *)va, envid, (void *)va, perm);
-	if (r < 0) {
-		return r;
-	}
-
-	if (pte & (PTE_W | PTE_COW)) {
-		// remap parent address space
-		r = sys_page_map(current_envid, (void *)va, current_envid, (void *)va, perm);
-		if (r < 0) {
+	int perm = PTE_U | PTE_P | PTE_COW;
+	
+	if (pte & PTE_SHARE) {
+		// both env have read and write permission
+		sys_page_map(current_envid, (void *)va, envid, (void *)va, PTE_SYSCALL);
+	} else if ((pte & PTE_W) || (pte & PTE_COW)) {
+		if ((r = sys_page_map(current_envid, (void *)va, envid, (void *)va, perm)) < 0) {
+			return r;
+		}
+		if ((r = sys_page_map(current_envid, (void *)va, current_envid, (void *)va, perm)) < 0) {
+			return r;
+		}
+	} else {
+		// read-only page
+		if ((r = sys_page_map(current_envid, (void *)va, envid, (void *)va, PTE_U | PTE_P)) < 0) {
 			return r;
 		}
 	}

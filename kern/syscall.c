@@ -157,8 +157,19 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 	// LAB 5: Your code here.
 	// Remember to check whether the user has supplied us with a good
 	// address!
-	panic("sys_env_set_trapframe not implemented");
-	
+	// panic("sys_env_set_trapframe not implemented");
+
+	// get env from envid
+	struct Env *env;
+	int r;
+	if ((r = envid2env(envid, &env, true)) < 0) {
+		return r;
+	}
+
+	// set envid's trap frame to 'tf'
+	env->env_tf = *tf;
+
+	return 0;
 }
 
 // Set the page fault upcall for 'envid' by modifying the corresponding struct
@@ -421,36 +432,38 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 		return -E_IPC_NOT_RECV;
 	}
 
-	// check whether srcva is page-aligned
-	if ((uintptr_t)srcva < UTOP && PGOFF(srcva) != 0) {
-		return -E_INVAL;
-	}
+	if ((uintptr_t)srcva < UTOP) {
+		// check whether srcva is page-aligned
+		if (PGOFF(srcva) != 0) {
+			return -E_INVAL;
+		}
 
-	// check whether perm is inappropriate
-	if ((uintptr_t)srcva < UTOP && perm && (!(perm & PTE_U) || !(perm & PTE_P) || (perm & ~PTE_SYSCALL))) {
-		return -E_INVAL;
-	}
+		// check whether perm is inappropriate
+		if (!(perm & PTE_U) || !(perm & PTE_P) || (perm & ~PTE_SYSCALL)) {
+			return -E_INVAL;
+		}
 
-	// check whether srcva is mapped in the caller's address space
-	pte_t *pte = NULL;
-	struct PageInfo *page = page_lookup(curenv->env_pgdir, srcva, &pte);
-	if (!page) {
-		return -E_INVAL;
-	}
+		// check whether srcva is mapped in the caller's address space
+		pte_t *pte = NULL;
+		struct PageInfo *page = page_lookup(curenv->env_pgdir, srcva, &pte);
+		if (!page) {
+			return -E_INVAL;
+		}
 
-	// check whether srcva is read-only in current environment
-	if ((perm & PTE_W) && !(*pte & PTE_W)) {
-		return -E_INVAL;
-	}
+		// check whether srcva is read-only in current environment
+		if ((perm & PTE_W) && !(*pte & PTE_W)) {
+			return -E_INVAL;
+		}
 
-	// check whether there's not enough memory to map srcva in envid's address space
-	if ((uintptr_t) env->env_ipc_dstva < UTOP) {
-		if (page_insert(env->env_pgdir, page, env->env_ipc_dstva, perm) < 0) {
-			return -E_NO_MEM;
-		} else {
+		// check whether there's not enough memory to map srcva in envid's address space
+		if ((uintptr_t) env->env_ipc_dstva < UTOP) {
+			if (page_insert(env->env_pgdir, page, env->env_ipc_dstva, perm) < 0) {
+				return -E_NO_MEM;
+			}
 			env->env_ipc_perm = perm;
 		}
 	}
+	
 
 	// update the target ipc fields
 	env->env_ipc_recving = false;
@@ -541,6 +554,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_ipc_recv((void *) a1);
 	case SYS_ipc_try_send:
 		return sys_ipc_try_send((envid_t)a1, (uint32_t)a2, (void *)a3, (unsigned int)a4);
+	case SYS_env_set_trapframe:
+		return sys_env_set_trapframe((envid_t)a1, (struct Trapframe *)a2);
 	default:
 		return -E_INVAL;
 	}

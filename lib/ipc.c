@@ -83,7 +83,7 @@ ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
 		int e = sys_ipc_try_send(to_env, val, pg, perm);
 
 		if (e == 0) {
-			break;
+			return;
 		}
 
 		// panic on any other error
